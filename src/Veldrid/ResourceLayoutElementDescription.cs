@@ -23,6 +23,10 @@ namespace Veldrid
         /// Miscellaneous resource options for this element.
         /// </summary>
         public ResourceLayoutElementOptions Options;
+        /// <summary>
+        /// The number of descriptors contained in the binding, accessed in a shader as an array
+        /// </summary>
+        public uint ArrayCount;
 
         /// <summary>
         /// Constructs a new ResourceLayoutElementDescription.
@@ -30,12 +34,13 @@ namespace Veldrid
         /// <param name="name">The name of the element.</param>
         /// <param name="kind">The kind of resource.</param>
         /// <param name="stages">The <see cref="ShaderStages"/> in which this element is used.</param>
-        public ResourceLayoutElementDescription(string name, ResourceKind kind, ShaderStages stages)
+        public ResourceLayoutElementDescription(string name, ResourceKind kind, ShaderStages stages, uint arrayCount = 1)
         {
             Name = name;
             Kind = kind;
             Stages = stages;
             Options = ResourceLayoutElementOptions.None;
+            ArrayCount = arrayCount;
         }
 
         /// <summary>
@@ -45,16 +50,19 @@ namespace Veldrid
         /// <param name="kind">The kind of resource.</param>
         /// <param name="stages">The <see cref="ShaderStages"/> in which this element is used.</param>
         /// <param name="options">Miscellaneous resource options for this element.</param>
+        /// <param name="arrayCount">Number of descriptors in the binding</param>
         public ResourceLayoutElementDescription(
             string name,
             ResourceKind kind,
             ShaderStages stages,
-            ResourceLayoutElementOptions options)
+            ResourceLayoutElementOptions options,
+            uint arrayCount = 1)
         {
             Name = name;
             Kind = kind;
             Stages = stages;
             Options = options;
+            ArrayCount = arrayCount;
         }
 
         /// <summary>
@@ -64,7 +72,7 @@ namespace Veldrid
         /// <returns>True if all elements are equal; false otherswise.</returns>
         public bool Equals(ResourceLayoutElementDescription other)
         {
-            return Name == other.Name && Kind == other.Kind && Stages == other.Stages && Options == other.Options;
+            return Name == other.Name && Kind == other.Kind && Stages == other.Stages && Options == other.Options && ArrayCount == other.ArrayCount;
         }
 
         /// <summary>
@@ -73,7 +81,7 @@ namespace Veldrid
         /// <returns>A 32-bit signed integer that is the hash code for this instance.</returns>
         public override int GetHashCode()
         {
-            return HashHelper.Combine(Name.GetHashCode(), (int)Kind, (int)Stages, (int)Options);
+            return HashHelper.Combine(Name.GetHashCode(), (int)Kind, (int)Stages, (int)Options, (int)ArrayCount);
         }
     }
 

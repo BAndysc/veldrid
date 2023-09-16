@@ -244,6 +244,8 @@ namespace Veldrid.MTL
             {
                 foreach (ResourceLayoutElementDescription rle in layout.Description.Elements)
                 {
+                    if (rle.ArrayCount > 1)
+                        throw new NotImplementedException("No support for arrayed resources yet.");
                     ResourceKind kind = rle.Kind;
                     if (kind == ResourceKind.UniformBuffer
                         || kind == ResourceKind.StructuredBufferReadOnly)

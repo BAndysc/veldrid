@@ -1,4 +1,6 @@
-﻿namespace Veldrid.D3D11
+﻿using System;
+
+namespace Veldrid.D3D11
 {
     internal class D3D11ResourceLayout : ResourceLayout
     {
@@ -24,6 +26,9 @@
 
             for (int i = 0; i < _bindingInfosByVdIndex.Length; i++)
             {
+                if (elements[i].ArrayCount > 1)
+                    throw new NotImplementedException("No support for arrayed resources yet.");
+
                 int slot;
                 switch (elements[i].Kind)
                 {

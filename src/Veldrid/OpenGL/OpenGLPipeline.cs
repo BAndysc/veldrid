@@ -216,6 +216,8 @@ namespace Veldrid.OpenGL
                 for (uint i = 0; i < resources.Length; i++)
                 {
                     ResourceLayoutElementDescription resource = resources[i];
+                    if (resources[i].ArrayCount > 1)
+                        throw new NotImplementedException("No support for arrayed resources yet.");
                     if (resource.Kind == ResourceKind.UniformBuffer)
                     {
                         uint blockIndex = GetUniformBlockIndex(resource.Name);

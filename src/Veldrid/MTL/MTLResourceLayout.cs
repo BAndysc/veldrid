@@ -1,3 +1,5 @@
+using System;
+
 namespace Veldrid.MTL
 {
     internal class MTLResourceLayout : ResourceLayout
@@ -40,6 +42,8 @@ namespace Veldrid.MTL
 
             for (int i = 0; i < _bindingInfosByVdIndex.Length; i++)
             {
+                if (elements[i].ArrayCount > 1)
+                    throw new NotImplementedException("No support for arrayed resources yet.");
                 uint slot;
                 switch (elements[i].Kind)
                 {

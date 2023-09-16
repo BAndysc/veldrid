@@ -38,14 +38,15 @@ namespace Veldrid.Vk
 
             for (uint i = 0; i < elements.Length; i++)
             {
+                var count = elements[i].ArrayCount;
                 bindings[i].binding = i;
-                bindings[i].descriptorCount = 1;
+                bindings[i].descriptorCount = count;
                 VkDescriptorType descriptorType = VkFormats.VdToVkDescriptorType(elements[i].Kind, elements[i].Options);
                 bindings[i].descriptorType = descriptorType;
                 bindings[i].stageFlags = VkFormats.VdToVkShaderStages(elements[i].Stages);
                 if ((elements[i].Options & ResourceLayoutElementOptions.DynamicBinding) != 0)
                 {
-                    DynamicBufferCount += 1;
+                    DynamicBufferCount += (int)count;
                 }
 
                 _descriptorTypes[i] = descriptorType;
@@ -53,25 +54,25 @@ namespace Veldrid.Vk
                 switch (descriptorType)
                 {
                     case VkDescriptorType.Sampler:
-                        samplerCount += 1;
+                        samplerCount += count;
                         break;
                     case VkDescriptorType.SampledImage:
-                        sampledImageCount += 1;
+                        sampledImageCount += count;
                         break;
                     case VkDescriptorType.StorageImage:
-                        storageImageCount += 1;
+                        storageImageCount += count;
                         break;
                     case VkDescriptorType.UniformBuffer:
-                        uniformBufferCount += 1;
+                        uniformBufferCount += count;
                         break;
                     case VkDescriptorType.UniformBufferDynamic:
-                        uniformBufferDynamicCount += 1;
+                        uniformBufferDynamicCount += count;
                         break;
                     case VkDescriptorType.StorageBuffer:
-                        storageBufferCount += 1;
+                        storageBufferCount += count;
                         break;
                     case VkDescriptorType.StorageBufferDynamic:
-                        storageBufferDynamicCount += 1;
+                        storageBufferDynamicCount += count;
                         break;
                 }
             }

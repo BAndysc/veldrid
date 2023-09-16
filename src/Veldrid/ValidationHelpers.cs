@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Linq;
 
 namespace Veldrid
 {
@@ -11,10 +12,12 @@ namespace Veldrid
             ResourceLayoutElementDescription[] elements = description.Layout.Description.Elements;
             BindableResource[] resources = description.BoundResources;
 
-            if (elements.Length != resources.Length)
+            var actualElementsCount = elements.Select(x => (int)x.ArrayCount).Sum();
+
+            if (actualElementsCount != resources.Length)
             {
                 throw new VeldridException(
-                    $"The number of resources specified ({resources.Length}) must be equal to the number of resources in the {nameof(ResourceLayout)} ({elements.Length}).");
+                    $"The number of resources specified ({resources.Length}) must be equal to the number of resources in the {nameof(ResourceLayout)} ({actualElementsCount}).");
             }
 
             for (uint i = 0; i < elements.Length; i++)
