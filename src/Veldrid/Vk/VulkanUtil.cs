@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
+using System.Threading;
 using Vulkan;
 using static Vulkan.VulkanNative;
 
@@ -10,11 +12,60 @@ namespace Veldrid.Vk
         private static Lazy<bool> s_isVulkanLoaded = new Lazy<bool>(TryLoadVulkan);
         private static readonly Lazy<string[]> s_instanceExtensions = new Lazy<string[]>(EnumerateInstanceExtensions);
 
+        private const string LibraryName = "GFSDK_Aftermath_Lib.x64.dll";
+
+        [DllImport(LibraryName, EntryPoint = "GFSDK_Aftermath_GetCrashDumpStatus")]
+        public static extern void GFSDK_Aftermath_GetCrashDumpStatus(GFSDK_Aftermath_CrashDump_Status* pOutStatus);
+
+        public enum GFSDK_Aftermath_CrashDump_Status
+        {
+            // No GPU crash has been detected by Aftermath, so far.
+            GFSDK_Aftermath_CrashDump_Status_NotStarted = 0,
+
+            // A GPU crash happened and was detected by Aftermath. Aftermath started to
+            // collect crash dump data.
+            GFSDK_Aftermath_CrashDump_Status_CollectingData,
+
+            // Aftermath failed to collect crash dump data. No further callback will be
+            // invoked.
+            GFSDK_Aftermath_CrashDump_Status_CollectingDataFailed,
+
+            // Aftermath is invoking the 'gpuCrashDumpCb' callback after collecting the crash
+            // dump data successfully.
+            GFSDK_Aftermath_CrashDump_Status_InvokingCallback,
+
+            // The 'gpuCrashDumpCb' callback returned and Aftermath finished processing the
+            // GPU crash. The application should now continue with handling the device
+            // removed/lost situation.
+            GFSDK_Aftermath_CrashDump_Status_Finished,
+
+            // Unknown problem - likely using an older driver incompatible with this
+            // Aftermath feature.
+            GFSDK_Aftermath_CrashDump_Status_Unknown,
+        }
+
         [Conditional("DEBUG")]
         public static void CheckResult(VkResult result)
         {
             if (result != VkResult.Success)
             {
+                if (result == VkResult.ErrorDeviceLost)
+                {
+                  // Check Aftermath crash dump status
+                  GFSDK_Aftermath_CrashDump_Status status = GFSDK_Aftermath_CrashDump_Status.GFSDK_Aftermath_CrashDump_Status_Unknown;
+                  GFSDK_Aftermath_GetCrashDumpStatus(&status);
+
+                  // Loop while Aftermath crash dump data collection has not finished or
+                  // the application is still processing the crash dump data.
+                  while (status != GFSDK_Aftermath_CrashDump_Status.GFSDK_Aftermath_CrashDump_Status_CollectingDataFailed &&
+                         status != GFSDK_Aftermath_CrashDump_Status.GFSDK_Aftermath_CrashDump_Status_Finished)
+                  {
+                      // Wait for a couple of milliseconds, and poll the crash dump status again.
+                      Thread.Sleep(50);
+                      GFSDK_Aftermath_GetCrashDumpStatus(&status);
+                  }
+                  Console.WriteLine("Aftermath crash dump status: {0}", status);
+                }
                 throw new VeldridException("Unsuccessful VkResult: " + result);
             }
         }
