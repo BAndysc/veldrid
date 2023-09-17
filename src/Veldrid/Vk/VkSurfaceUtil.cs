@@ -157,6 +157,8 @@ namespace Veldrid.Vk
                 contentView.layer = metalLayer.NativePtr;
             }
 
+            metalLayer.displaySyncEnabled = gd.SyncToVerticalBlank;
+
             if (hasExtMetalSurface)
             {
                 VkMetalSurfaceCreateInfoEXT surfaceCI = new VkMetalSurfaceCreateInfoEXT();

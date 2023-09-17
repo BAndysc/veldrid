@@ -86,6 +86,8 @@ namespace Veldrid.OpenGL
 
         public override Swapchain MainSwapchain => _mainSwapchain;
 
+        public override ulong TotalAllocatedBytes => 0;
+
         public override bool SyncToVerticalBlank
         {
             get => _syncToVBlank;

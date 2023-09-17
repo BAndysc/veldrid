@@ -111,6 +111,7 @@ namespace Veldrid.Vk
         public vkGetBufferMemoryRequirements2_t GetBufferMemoryRequirements2 => _getBufferMemoryRequirements2;
         public vkGetImageMemoryRequirements2_t GetImageMemoryRequirements2 => _getImageMemoryRequirements2;
         public vkCreateMetalSurfaceEXT_t CreateMetalSurfaceEXT => _createMetalSurfaceEXT;
+        public override ulong TotalAllocatedBytes => _memoryManager.TotalAllocatedBytes;
 
         private readonly object _submittedFencesLock = new object();
         private readonly ConcurrentQueue<Vulkan.VkFence> _availableSubmissionFences = new ConcurrentQueue<Vulkan.VkFence>();
@@ -1180,6 +1181,7 @@ namespace Veldrid.Vk
         private protected override void UpdateBufferCore(DeviceBuffer buffer, uint bufferOffsetInBytes, IntPtr source, uint sizeInBytes)
         {
             VkBuffer vkBuffer = Util.AssertSubtype<DeviceBuffer, VkBuffer>(buffer);
+            Trace.Assert(vkBuffer.Memory.DeviceMemory.Handle != 0);
             VkBuffer copySrcVkBuffer = null;
             IntPtr mappedPtr;
             byte* destPtr;
@@ -1292,6 +1294,7 @@ namespace Veldrid.Vk
             }
             else
             {
+                Trace.Assert(vkTex.Memory.DeviceMemory.Handle != 0);
                 VkTexture stagingTex = GetFreeStagingTexture(width, height, depth, texture.Format);
                 UpdateTexture(stagingTex, source, sizeInBytes, 0, 0, 0, width, height, depth, 0, 0);
                 SharedCommandPool pool = GetFreeCommandPool();

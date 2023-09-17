@@ -69,6 +69,8 @@ namespace Veldrid.D3D11
 
         public override GraphicsDeviceFeatures Features { get; }
 
+        public override ulong TotalAllocatedBytes => 0;
+
         public D3D11GraphicsDevice(GraphicsDeviceOptions options, D3D11DeviceOptions d3D11DeviceOptions, SwapchainDescription? swapchainDesc)
             : this(MergeOptions(d3D11DeviceOptions, options), swapchainDesc)
         {

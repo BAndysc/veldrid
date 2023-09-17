@@ -39,7 +39,7 @@ namespace Veldrid
 
         /// <summary>
         /// Gets a value identifying whether texture coordinates begin in the top left corner of a Texture.
-        /// If true, (0, 0) refers to the top-left texel of a Texture. If false, (0, 0) refers to the bottom-left 
+        /// If true, (0, 0) refers to the top-left texel of a Texture. If false, (0, 0) refers to the bottom-left
         /// texel of a Texture. This property is useful for determining how the output of a Framebuffer should be sampled.
         /// </summary>
         public abstract bool IsUvOriginTopLeft { get; }
@@ -71,6 +71,8 @@ namespace Veldrid
         /// Gets a <see cref="GraphicsDeviceFeatures"/> which enumerates the optional features supported by this instance.
         /// </summary>
         public abstract GraphicsDeviceFeatures Features { get; }
+
+        public abstract ulong TotalAllocatedBytes { get; }
 
         /// <summary>
         /// Gets or sets whether the main Swapchain's <see cref="SwapBuffers()"/> should be synchronized to the window system's

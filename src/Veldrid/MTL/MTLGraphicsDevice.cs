@@ -159,6 +159,8 @@ namespace Veldrid.MTL
 
         public override GraphicsDeviceFeatures Features { get; }
 
+        public override ulong TotalAllocatedBytes => 0;
+
         private void OnCommandBufferCompleted(IntPtr block, MTLCommandBuffer cb)
         {
             lock (_submittedCommandsLock)

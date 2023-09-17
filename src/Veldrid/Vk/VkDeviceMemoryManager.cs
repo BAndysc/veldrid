@@ -22,6 +22,8 @@ namespace Veldrid.Vk
         private readonly vkGetBufferMemoryRequirements2_t _getBufferMemoryRequirements2;
         private readonly vkGetImageMemoryRequirements2_t _getImageMemoryRequirements2;
 
+        public ulong TotalAllocatedBytes => _totalAllocatedBytes;
+
         public VkDeviceMemoryManager(
             VkDevice device,
             VkPhysicalDevice physicalDevice,
@@ -395,16 +397,29 @@ namespace Veldrid.Vk
             }
 
 #if DEBUG
+            private static Comparer<VkMemoryBlock> _comparer = Comparer<VkMemoryBlock>.Create((a, b) => a.Offset.CompareTo(b.Offset));
             private List<VkMemoryBlock> _allocatedBlocks = new List<VkMemoryBlock>();
 
             private void CheckAllocatedBlock(VkMemoryBlock block)
             {
-                foreach (VkMemoryBlock oldBlock in _allocatedBlocks)
+                int index = _allocatedBlocks.BinarySearch(0, _allocatedBlocks.Count, new VkMemoryBlock(){Offset = block.Offset}, _comparer);
+
+                Debug.Assert(index < 0, "Allocated block already exists.");
+
+                var indexOfNextLargerOffset = ~index;
+                var indexOfPreviousOffset = indexOfNextLargerOffset - 1;
+
+                if (indexOfPreviousOffset >= 0 && indexOfPreviousOffset < _allocatedBlocks.Count)
                 {
-                    Debug.Assert(!BlocksOverlap(block, oldBlock), "Allocated blocks have overlapped.");
+                    Debug.Assert(!BlocksOverlap(block, _allocatedBlocks[indexOfPreviousOffset]), "Allocated blocks have overlapped.");
                 }
 
-                _allocatedBlocks.Add(block);
+                if (indexOfNextLargerOffset >= 0 && indexOfNextLargerOffset < _allocatedBlocks.Count)
+                {
+                    Debug.Assert(!BlocksOverlap(block, _allocatedBlocks[indexOfNextLargerOffset]), "Allocated blocks have overlapped.");
+                }
+
+                _allocatedBlocks.Insert(~index, block);
             }
 
             private bool BlocksOverlap(VkMemoryBlock first, VkMemoryBlock second)
@@ -422,7 +437,9 @@ namespace Veldrid.Vk
 
             private void RemoveAllocatedBlock(VkMemoryBlock block)
             {
-                Debug.Assert(_allocatedBlocks.Remove(block), "Unable to remove a supposedly allocated block.");
+                int index = _allocatedBlocks.BinarySearch(0, _allocatedBlocks.Count, new VkMemoryBlock(){Offset = block.Offset}, _comparer);
+                Debug.Assert(index >= 0, "Unable to remove a supposedly allocated block.");
+                _allocatedBlocks.RemoveAt(index);
             }
 #endif
 
