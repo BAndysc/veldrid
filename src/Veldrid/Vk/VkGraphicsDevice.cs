@@ -1412,6 +1412,22 @@ namespace Veldrid.Vk
         {
             return s_isSupported.Value;
         }
+        enum VkValidationFeatureEnableEXT : int {
+            VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT = 0,
+            VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_RESERVE_BINDING_SLOT_EXT = 1,
+            VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT = 2,
+            VK_VALIDATION_FEATURE_ENABLE_DEBUG_PRINTF_EXT = 3,
+            VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT = 4,
+        }
+
+        struct VkValidationFeaturesEXT {
+            public VkStructureType                         sType;
+            public void*                             pNext;
+            public uint                                enabledValidationFeatureCount;
+            public VkValidationFeatureEnableEXT*     pEnabledValidationFeatures;
+            public uint                                disabledValidationFeatureCount;
+            public void*    pDisabledValidationFeatures;
+        }
 
         private static bool CheckIsSupported()
         {
@@ -1429,6 +1445,17 @@ namespace Veldrid.Vk
             applicationInfo.pEngineName = s_name;
 
             instanceCI.pApplicationInfo = &applicationInfo;
+
+            VkValidationFeaturesEXT e = new VkValidationFeaturesEXT();
+            e.sType = (VkStructureType)1000247000;
+            e.enabledValidationFeatureCount = 2;
+            VkValidationFeatureEnableEXT* enabled = stackalloc VkValidationFeatureEnableEXT[2];
+            enabled[0] = VkValidationFeatureEnableEXT.VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT;
+            enabled[1] = VkValidationFeatureEnableEXT.VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_RESERVE_BINDING_SLOT_EXT;
+            //fixed(VkValidationFeatureEnableEXT* ptr = &enabled)
+                e.pEnabledValidationFeatures = enabled;
+
+            instanceCI.pNext = &e;
 
             VkResult result = vkCreateInstance(ref instanceCI, null, out VkInstance testInstance);
             if (result != VkResult.Success)
