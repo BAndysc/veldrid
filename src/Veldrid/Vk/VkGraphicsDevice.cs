@@ -690,7 +690,17 @@ namespace Veldrid.Vk
 
             vkGetPhysicalDeviceMemoryProperties(_physicalDevice, out _physicalDeviceMemProperties);
         }
-
+        enum VkDeviceDiagnosticsConfigFlagBitsNV {
+            VK_DEVICE_DIAGNOSTICS_CONFIG_ENABLE_SHADER_DEBUG_INFO_BIT_NV = 0x00000001,
+            VK_DEVICE_DIAGNOSTICS_CONFIG_ENABLE_RESOURCE_TRACKING_BIT_NV = 0x00000002,
+            VK_DEVICE_DIAGNOSTICS_CONFIG_ENABLE_AUTOMATIC_CHECKPOINTS_BIT_NV = 0x00000004,
+            VK_DEVICE_DIAGNOSTICS_CONFIG_ENABLE_SHADER_ERROR_REPORTING_BIT_NV = 0x00000008,
+        }
+        unsafe struct VkDeviceDiagnosticsConfigCreateInfoNV {
+            public VkStructureType                     sType;
+            public void*                         pNext;
+            public VkDeviceDiagnosticsConfigFlagBitsNV    flags;
+        }
         public VkExtensionProperties[] GetDeviceExtensionProperties()
         {
             uint propertyCount = 0;
@@ -730,6 +740,7 @@ namespace Veldrid.Vk
             VkExtensionProperties[] props = GetDeviceExtensionProperties();
 
             HashSet<string> requiredInstanceExtensions = new HashSet<string>(options.DeviceExtensions ?? Array.Empty<string>());
+            requiredInstanceExtensions.Add("VK_NV_device_diagnostics_config");
 
             bool hasMemReqs2 = false;
             bool hasDedicatedAllocation = false;
@@ -799,6 +810,18 @@ namespace Veldrid.Vk
             VkDeviceCreateInfo deviceCreateInfo = VkDeviceCreateInfo.New();
             deviceCreateInfo.queueCreateInfoCount = queueCreateInfosCount;
             deviceCreateInfo.pQueueCreateInfos = queueCreateInfos;
+
+            VkDeviceDiagnosticsConfigCreateInfoNV nv = new VkDeviceDiagnosticsConfigCreateInfoNV();
+
+            nv.sType = (VkStructureType)1000300001;
+            nv.pNext = null;
+            nv.flags =
+                VkDeviceDiagnosticsConfigFlagBitsNV.VK_DEVICE_DIAGNOSTICS_CONFIG_ENABLE_SHADER_DEBUG_INFO_BIT_NV |
+                VkDeviceDiagnosticsConfigFlagBitsNV.VK_DEVICE_DIAGNOSTICS_CONFIG_ENABLE_RESOURCE_TRACKING_BIT_NV |
+                VkDeviceDiagnosticsConfigFlagBitsNV.VK_DEVICE_DIAGNOSTICS_CONFIG_ENABLE_AUTOMATIC_CHECKPOINTS_BIT_NV |
+                VkDeviceDiagnosticsConfigFlagBitsNV.VK_DEVICE_DIAGNOSTICS_CONFIG_ENABLE_SHADER_ERROR_REPORTING_BIT_NV;
+
+            deviceCreateInfo.pNext = &nv;
 
             deviceCreateInfo.pEnabledFeatures = &deviceFeatures;
 
