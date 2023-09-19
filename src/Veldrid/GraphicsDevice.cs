@@ -131,7 +131,16 @@ namespace Veldrid
         /// been previously called on this object.</param>
         /// <param name="fence">A <see cref="Fence"/> which will become signaled after this submission fully completes
         /// execution.</param>
-        public void SubmitCommands(CommandList commandList, Fence fence) => SubmitCommandsCore(commandList, fence);
+        public void SubmitCommands(CommandList commandList, Fence fence)
+        {
+#if VALIDATE_USAGE
+            if (fence != null && fence.Signaled)
+            {
+                throw new VeldridException("Fences must be reset before being submitted.");
+            }
+#endif
+            SubmitCommandsCore(commandList, fence);
+        }
 
         private protected abstract void SubmitCommandsCore(
             CommandList commandList,
@@ -1240,5 +1249,7 @@ namespace Veldrid
             return new MTL.MTLGraphicsDevice(options, swapchainDesc);
         }
 #endif
+
+        public virtual void ReadStagingTexture<T>(Texture pickingDestTexture, Span<T> output) where T : unmanaged { throw new NotImplementedException(); }
     }
 }

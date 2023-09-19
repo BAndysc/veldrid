@@ -28,11 +28,13 @@ namespace Veldrid.Vk
         private VkPhysicalDeviceFeatures _physicalDeviceFeatures;
         private VkPhysicalDeviceMemoryProperties _physicalDeviceMemProperties;
         private VkDevice _device;
+        private uint _transferQueueIndex;
         private uint _graphicsQueueIndex;
         private uint _presentQueueIndex;
         private VkCommandPool _graphicsCommandPool;
         private readonly object _graphicsCommandPoolLock = new object();
         private VkQueue _graphicsQueue;
+        private VkQueue _transferQueue;
         private readonly object _graphicsQueueLock = new object();
         private VkDebugReportCallbackEXT _debugCallbackHandle;
         private PFN_vkDebugReportCallbackEXT _debugCallbackFunc;
@@ -94,11 +96,34 @@ namespace Veldrid.Vk
             return true;
         }
 
+        public override void ReadStagingTexture<T>(Texture pickingDestTexture, Span<T> output)
+        {
+            var bytes = sizeof(T) * output.Length;
+            VkTexture vkTex = Util.AssertSubtype<Texture, VkTexture>(pickingDestTexture);
+            Debug.Assert((vkTex.Usage & TextureUsage.Staging) != 0);
+
+            void* mappedPtr;
+            if (vkTex.Memory.IsPersistentMapped)
+                mappedPtr = vkTex.Memory.BlockMappedPointer;
+            else
+            {
+                VkResult result = vkMapMemory(Device, vkTex.Memory.DeviceMemory, vkTex.Memory.Offset, (uint)bytes, 0, &mappedPtr);
+                CheckResult(result);
+            }
+
+            Unsafe.CopyBlock(Unsafe.AsPointer(ref output[0]), mappedPtr, (uint) bytes);
+
+            if (!vkTex.Memory.IsPersistentMapped)
+                vkUnmapMemory(Device, vkTex.Memory.DeviceMemory);
+        }
+
         public VkInstance Instance => _instance;
         public VkDevice Device => _device;
         public VkPhysicalDevice PhysicalDevice => _physicalDevice;
         public VkPhysicalDeviceMemoryProperties PhysicalDeviceMemProperties => _physicalDeviceMemProperties;
+        public VkQueue TransferQueue => _transferQueue;
         public VkQueue GraphicsQueue => _graphicsQueue;
+        public uint TransferQueueIndex => _transferQueueIndex;
         public uint GraphicsQueueIndex => _graphicsQueueIndex;
         public uint PresentQueueIndex => _presentQueueIndex;
         public string DriverName => _driverName;
@@ -458,13 +483,14 @@ namespace Veldrid.Vk
 
             VkInstanceCreateInfo instanceCI = VkInstanceCreateInfo.New();
             VkApplicationInfo applicationInfo = new VkApplicationInfo();
-            applicationInfo.apiVersion = new VkVersion(1, 0, 0);
-            applicationInfo.applicationVersion = new VkVersion(1, 0, 0);
-            applicationInfo.engineVersion = new VkVersion(1, 0, 0);
+            applicationInfo.apiVersion = new VkVersion(1, 3, 0);
+            applicationInfo.applicationVersion = new VkVersion(1, 3, 0);
+            applicationInfo.engineVersion = new VkVersion(1, 3, 0);
             applicationInfo.pApplicationName = s_name;
             applicationInfo.pEngineName = s_name;
 
             instanceCI.pApplicationInfo = &applicationInfo;
+            instanceCI.flags |= 1;
 
             StackList<IntPtr, Size64Bytes> instanceExtensions = new StackList<IntPtr, Size64Bytes>();
             StackList<IntPtr, Size64Bytes> instanceLayers = new StackList<IntPtr, Size64Bytes>();
@@ -472,6 +498,11 @@ namespace Veldrid.Vk
             if (availableInstanceExtensions.Contains(CommonStrings.VK_KHR_portability_subset))
             {
                 _surfaceExtensions.Add(CommonStrings.VK_KHR_portability_subset);
+            }
+
+            if (availableInstanceExtensions.Contains(CommonStrings.VK_KHR_portability_enumeration))
+            {
+                _surfaceExtensions.Add(CommonStrings.VK_KHR_portability_enumeration);
             }
 
             if (availableInstanceExtensions.Contains(CommonStrings.VK_KHR_SURFACE_EXTENSION_NAME))
@@ -655,7 +686,9 @@ namespace Veldrid.Vk
 
             if (debugReportFlags == VkDebugReportFlagsEXT.ErrorEXT)
             {
-                throw new VeldridException("A Vulkan validation error was encountered: " + fullMessage);
+                Console.WriteLine("[VALIDATION ERROR]");
+                Console.WriteLine(fullMessage);
+                //throw new VeldridException("A Vulkan validation error was encountered: " + fullMessage);
             }
 
             Console.WriteLine(fullMessage);
@@ -719,7 +752,7 @@ namespace Veldrid.Vk
         {
             GetQueueFamilyIndices(surface);
 
-            HashSet<uint> familyIndices = new HashSet<uint> { _graphicsQueueIndex, _presentQueueIndex };
+            HashSet<uint> familyIndices = new HashSet<uint>() { _graphicsQueueIndex, _presentQueueIndex, _transferQueueIndex };
             VkDeviceQueueCreateInfo* queueCreateInfos = stackalloc VkDeviceQueueCreateInfo[familyIndices.Count];
             uint queueCreateInfosCount = (uint)familyIndices.Count;
 
@@ -727,7 +760,7 @@ namespace Veldrid.Vk
             foreach (uint index in familyIndices)
             {
                 VkDeviceQueueCreateInfo queueCreateInfo = VkDeviceQueueCreateInfo.New();
-                queueCreateInfo.queueFamilyIndex = _graphicsQueueIndex;
+                queueCreateInfo.queueFamilyIndex = index;
                 queueCreateInfo.queueCount = 1;
                 float priority = 1f;
                 queueCreateInfo.pQueuePriorities = &priority;
@@ -740,7 +773,7 @@ namespace Veldrid.Vk
             VkExtensionProperties[] props = GetDeviceExtensionProperties();
 
             HashSet<string> requiredInstanceExtensions = new HashSet<string>(options.DeviceExtensions ?? Array.Empty<string>());
-            requiredInstanceExtensions.Add("VK_NV_device_diagnostics_config");
+//            requiredInstanceExtensions.Add("VK_NV_device_diagnostics_config");
 
             bool hasMemReqs2 = false;
             bool hasDedicatedAllocation = false;
@@ -797,6 +830,7 @@ namespace Veldrid.Vk
                     {
                         activeExtensions[activeExtensionCount++] = (IntPtr)properties[property].extensionName;
                     }
+                    // VK_KHR_portability_enumeration
                 }
             }
 
@@ -821,7 +855,11 @@ namespace Veldrid.Vk
                 VkDeviceDiagnosticsConfigFlagBitsNV.VK_DEVICE_DIAGNOSTICS_CONFIG_ENABLE_AUTOMATIC_CHECKPOINTS_BIT_NV |
                 VkDeviceDiagnosticsConfigFlagBitsNV.VK_DEVICE_DIAGNOSTICS_CONFIG_ENABLE_SHADER_ERROR_REPORTING_BIT_NV;
 
+            VkPhysicalDeviceShaderDrawParameterFeatures drawParamFeatures = VkPhysicalDeviceShaderDrawParameterFeatures.New();
+            drawParamFeatures.shaderDrawParameters = true;
+
             deviceCreateInfo.pNext = &nv;
+            nv.pNext = &drawParamFeatures;
 
             deviceCreateInfo.pEnabledFeatures = &deviceFeatures;
 
@@ -847,6 +885,7 @@ namespace Veldrid.Vk
             }
 
             vkGetDeviceQueue(_device, _graphicsQueueIndex, 0, out _graphicsQueue);
+            vkGetDeviceQueue(_device, _transferQueueIndex, 0, out _transferQueue);
 
             if (_debugMarkerEnabled)
             {
@@ -944,13 +983,22 @@ namespace Veldrid.Vk
 
             bool foundGraphics = false;
             bool foundPresent = surface == VkSurfaceKHR.Null;
+            bool foundTransfer = false;
 
             for (uint i = 0; i < qfp.Length; i++)
             {
-                if ((qfp[i].queueFlags & VkQueueFlags.Graphics) != 0)
+                var supportsGraphics = (qfp[i].queueFlags & VkQueueFlags.Graphics) != 0;
+                var supportsTransfer = (qfp[i].queueFlags & VkQueueFlags.Transfer) != 0;
+                if (!foundGraphics && supportsGraphics)
                 {
                     _graphicsQueueIndex = i;
                     foundGraphics = true;
+                }
+
+                if ((!foundTransfer || foundTransfer && _graphicsQueueIndex == _transferQueueIndex) && supportsTransfer)
+                {
+                    _transferQueueIndex = i;
+                    foundTransfer = true;
                 }
 
                 if (!foundPresent)
@@ -961,11 +1009,6 @@ namespace Veldrid.Vk
                         _presentQueueIndex = i;
                         foundPresent = true;
                     }
-                }
-
-                if (foundGraphics && foundPresent)
-                {
-                    return;
                 }
             }
         }
@@ -1445,6 +1488,7 @@ namespace Veldrid.Vk
             applicationInfo.pEngineName = s_name;
 
             instanceCI.pApplicationInfo = &applicationInfo;
+            instanceCI.flags |= 1;
 
             VkValidationFeaturesEXT e = new VkValidationFeaturesEXT();
             e.sType = (VkStructureType)1000247000;

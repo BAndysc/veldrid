@@ -293,6 +293,22 @@ namespace Veldrid.Vk
         {
             VkPipeline pipeline = bindPoint == VkPipelineBindPoint.Graphics ? _currentGraphicsPipeline : _currentComputePipeline;
 
+            for (int i = 0; i < resourceSetCount; i++)
+            {
+                var expectedLayout = pipeline.ResourceLayouts[i].Description;
+                var actualLayout = resourceSets[i].Set.Layout;
+                for (int j = 0; j < expectedLayout.Elements.Length; ++j)
+                {
+                    var expectedel = expectedLayout.Elements[j];
+                    var actualel = actualLayout.Description.Elements[j];
+
+                    if (expectedel.Stages != actualel.Stages)
+                    {
+                        throw new VeldridException("Resource set layout mismatch");
+                    }
+                }
+            }
+
             VkDescriptorSet* descriptorSets = stackalloc VkDescriptorSet[(int)resourceSetCount];
             uint* dynamicOffsets = stackalloc uint[pipeline.DynamicOffsetsCount];
             uint currentBatchCount = 0;
@@ -758,11 +774,11 @@ namespace Veldrid.Vk
             VkMemoryBarrier barrier;
             barrier.sType = VkStructureType.MemoryBarrier;
             barrier.srcAccessMask = VkAccessFlags.TransferWrite;
-            barrier.dstAccessMask = VkAccessFlags.VertexAttributeRead;
+            barrier.dstAccessMask = VkAccessFlags.VertexAttributeRead | VkAccessFlags.IndexRead | VkAccessFlags.TransferRead | VkAccessFlags.TransferWrite | VkAccessFlags.UniformRead | VkAccessFlags.ShaderRead;
             barrier.pNext = null;
             vkCmdPipelineBarrier(
                 _cb,
-                VkPipelineStageFlags.Transfer, VkPipelineStageFlags.VertexInput,
+                VkPipelineStageFlags.Transfer, VkPipelineStageFlags.VertexInput | VkPipelineStageFlags.Transfer | VkPipelineStageFlags.VertexShader | VkPipelineStageFlags.FragmentShader,
                 VkDependencyFlags.None,
                 1, ref barrier,
                 0, null,
@@ -953,6 +969,9 @@ namespace Veldrid.Vk
             else if (!sourceIsStaging && destIsStaging)
             {
                 VkImage srcImage = srcVkTexture.OptimalDeviceImage;
+
+                var oldLayout = srcVkTexture.GetImageLayout(srcMipLevel, srcBaseArrayLayer);
+
                 srcVkTexture.TransitionImageLayout(
                     cb,
                     srcMipLevel,
@@ -1011,16 +1030,13 @@ namespace Veldrid.Vk
 
                 vkCmdCopyImageToBuffer(cb, srcImage, VkImageLayout.TransferSrcOptimal, dstBuffer, layerCount, layers);
 
-                if ((srcVkTexture.Usage & TextureUsage.Sampled) != 0)
-                {
-                    srcVkTexture.TransitionImageLayout(
-                        cb,
-                        srcMipLevel,
-                        1,
-                        srcBaseArrayLayer,
-                        layerCount,
-                        VkImageLayout.ShaderReadOnlyOptimal);
-                }
+                srcVkTexture.TransitionImageLayout(
+                    cb,
+                    srcMipLevel,
+                    1,
+                    srcBaseArrayLayer,
+                    layerCount,
+                    oldLayout);
             }
             else
             {

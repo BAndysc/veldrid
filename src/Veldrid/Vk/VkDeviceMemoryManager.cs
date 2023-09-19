@@ -106,7 +106,7 @@ namespace Veldrid.Vk
                     ? MinDedicatedAllocationSizeDynamic
                     : MinDedicatedAllocationSizeNonDynamic;
 
-                if (dedicated || size >= minDedicatedAllocationSize)
+                if (dedicated && size >= minDedicatedAllocationSize)
                 {
                     VkMemoryAllocateInfo allocateInfo = VkMemoryAllocateInfo.New();
                     allocateInfo.allocationSize = size;

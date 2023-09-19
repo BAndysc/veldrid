@@ -316,9 +316,10 @@ namespace Veldrid.Vk
 
             VkSubpassDependency subpassDependency = new VkSubpassDependency();
             subpassDependency.srcSubpass = SubpassExternal;
-            subpassDependency.srcStageMask = VkPipelineStageFlags.ColorAttachmentOutput;
-            subpassDependency.dstStageMask = VkPipelineStageFlags.ColorAttachmentOutput;
-            subpassDependency.dstAccessMask = VkAccessFlags.ColorAttachmentRead | VkAccessFlags.ColorAttachmentWrite;
+            subpassDependency.srcStageMask = VkPipelineStageFlags.ColorAttachmentOutput | VkPipelineStageFlags.LateFragmentTests;
+            subpassDependency.dstStageMask = VkPipelineStageFlags.ColorAttachmentOutput | VkPipelineStageFlags.EarlyFragmentTests;
+            subpassDependency.srcAccessMask = VkAccessFlags.DepthStencilAttachmentWrite;
+            subpassDependency.dstAccessMask = VkAccessFlags.ColorAttachmentRead | VkAccessFlags.ColorAttachmentWrite | VkAccessFlags.DepthStencilAttachmentWrite | VkAccessFlags.DepthStencilAttachmentRead;
 
             renderPassCI.attachmentCount = attachments.Count;
             renderPassCI.pAttachments = (VkAttachmentDescription*)attachments.Data;

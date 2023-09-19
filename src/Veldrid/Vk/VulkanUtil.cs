@@ -17,7 +17,7 @@ namespace Veldrid.Vk
         [DllImport(LibraryName, EntryPoint = "GFSDK_Aftermath_GetCrashDumpStatus")]
         public static extern void GFSDK_Aftermath_GetCrashDumpStatus(GFSDK_Aftermath_CrashDump_Status* pOutStatus);
 
-        public enum GFSDK_Aftermath_CrashDump_Status
+        public enum GFSDK_Aftermath_CrashDump_Status : uint
         {
             // No GPU crash has been detected by Aftermath, so far.
             GFSDK_Aftermath_CrashDump_Status_NotStarted = 0,
@@ -60,6 +60,7 @@ namespace Veldrid.Vk
                   while (status != GFSDK_Aftermath_CrashDump_Status.GFSDK_Aftermath_CrashDump_Status_CollectingDataFailed &&
                          status != GFSDK_Aftermath_CrashDump_Status.GFSDK_Aftermath_CrashDump_Status_Finished)
                   {
+                      Console.WriteLine("Polling Aftermath crash dump status... has: " + status);
                       // Wait for a couple of milliseconds, and poll the crash dump status again.
                       Thread.Sleep(50);
                       GFSDK_Aftermath_GetCrashDumpStatus(&status);
@@ -293,6 +294,13 @@ namespace Veldrid.Vk
                 srcStageFlags = VkPipelineStageFlags.ColorAttachmentOutput;
                 dstStageFlags = VkPipelineStageFlags.FragmentShader;
             }
+            else if (oldLayout == VkImageLayout.DepthStencilAttachmentOptimal && newLayout == VkImageLayout.TransferSrcOptimal)
+            {
+                barrier.srcAccessMask = VkAccessFlags.DepthStencilAttachmentWrite;
+                barrier.dstAccessMask = VkAccessFlags.TransferRead;
+                srcStageFlags = VkPipelineStageFlags.LateFragmentTests;
+                dstStageFlags = VkPipelineStageFlags.Transfer;
+            }
             else if (oldLayout == VkImageLayout.DepthStencilAttachmentOptimal && newLayout == VkImageLayout.ShaderReadOnlyOptimal)
             {
                 barrier.srcAccessMask = VkAccessFlags.DepthStencilAttachmentWrite;
@@ -348,6 +356,13 @@ namespace Veldrid.Vk
                 barrier.dstAccessMask = VkAccessFlags.TransferRead;
                 srcStageFlags = VkPipelineStageFlags.BottomOfPipe;
                 dstStageFlags = VkPipelineStageFlags.Transfer;
+            }
+            else if (oldLayout == VkImageLayout.TransferSrcOptimal && newLayout == VkImageLayout.ColorAttachmentOptimal)
+            {
+                barrier.srcAccessMask = VkAccessFlags.TransferRead;
+                barrier.dstAccessMask = VkAccessFlags.ColorAttachmentWrite;
+                srcStageFlags = VkPipelineStageFlags.Transfer;
+                dstStageFlags = VkPipelineStageFlags.ColorAttachmentOutput;
             }
             else
             {
