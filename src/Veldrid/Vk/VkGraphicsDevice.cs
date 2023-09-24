@@ -706,8 +706,20 @@ namespace Veldrid.Vk
 
             VkPhysicalDevice[] physicalDevices = new VkPhysicalDevice[deviceCount];
             vkEnumeratePhysicalDevices(_instance, ref deviceCount, ref physicalDevices[0]);
-            // Just use the first one.
-            _physicalDevice = physicalDevices[0];
+
+            int bestDevice = 0;
+            for (int i = 0; i < deviceCount; ++i)
+            {
+                vkGetPhysicalDeviceProperties(physicalDevices[i], out _physicalDeviceProperties);
+                // prefer discrete GPU
+                if (_physicalDeviceProperties.deviceType == VkPhysicalDeviceType.DiscreteGpu)
+                {
+                    bestDevice = i;
+                    break;
+                }
+            }
+
+            _physicalDevice = physicalDevices[bestDevice];
 
             vkGetPhysicalDeviceProperties(_physicalDevice, out _physicalDeviceProperties);
             fixed (byte* utf8NamePtr = _physicalDeviceProperties.deviceName)
