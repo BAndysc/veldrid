@@ -20,9 +20,11 @@ namespace Veldrid
                     $"The number of resources specified ({resources.Length}) must be equal to the number of resources in the {nameof(ResourceLayout)} ({actualElementsCount}).");
             }
 
+            int resourceIndex = 0;
             for (uint i = 0; i < elements.Length; i++)
             {
-                ValidateResourceKind(elements[i].Kind, resources[i], i);
+                for (uint j = 0; j < elements[i].ArrayCount; ++j)
+                    ValidateResourceKind(elements[i].Kind, resources[resourceIndex++], i);
             }
 
             for (int i = 0; i < description.Layout.Description.Elements.Length; i++)
