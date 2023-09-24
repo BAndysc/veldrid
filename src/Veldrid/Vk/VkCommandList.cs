@@ -293,6 +293,19 @@ namespace Veldrid.Vk
         {
             VkPipeline pipeline = bindPoint == VkPipelineBindPoint.Graphics ? _currentGraphicsPipeline : _currentComputePipeline;
 
+            bool anyChanged = false;
+            for (uint currentSlot = 0; currentSlot < resourceSetCount; currentSlot++)
+            {
+                if (resourceSetsChanged[currentSlot])
+                {
+                    anyChanged = true;
+                    break;
+                }
+            }
+
+            if (!anyChanged)
+                return;
+
             for (int i = 0; i < resourceSetCount; i++)
             {
                 var expectedLayout = pipeline.ResourceLayouts[i].Description;
@@ -315,11 +328,13 @@ namespace Veldrid.Vk
             uint currentBatchFirstSet = 0;
             uint currentBatchDynamicOffsetCount = 0;
 
+            var bindAll = pipeline.DynamicOffsetsCount > 0;
+
             for (uint currentSlot = 0; currentSlot < resourceSetCount; currentSlot++)
             {
-                bool batchEnded = !resourceSetsChanged[currentSlot] || currentSlot == resourceSetCount - 1;
+                bool batchEnded = !bindAll && !resourceSetsChanged[currentSlot] || currentSlot == resourceSetCount - 1;
 
-                if (resourceSetsChanged[currentSlot])
+                if (bindAll || resourceSetsChanged[currentSlot])
                 {
                     resourceSetsChanged[currentSlot] = false;
                     VkResourceSet vkSet = Util.AssertSubtype<ResourceSet, VkResourceSet>(resourceSets[currentSlot].Set);
@@ -985,7 +1000,7 @@ namespace Veldrid.Vk
                 VkImageAspectFlags aspect = (srcVkTexture.Usage & TextureUsage.DepthStencil) != 0
                     ? VkImageAspectFlags.Depth
                     : VkImageAspectFlags.Color;
-                
+
                 Util.GetMipDimensions(dstVkTexture, dstMipLevel, out uint mipWidth, out uint mipHeight, out uint mipDepth);
                 uint blockSize = FormatHelpers.IsCompressedFormat(srcVkTexture.Format) ? 4u : 1u;
                 uint bufferRowLength = Math.Max(mipWidth, blockSize);
