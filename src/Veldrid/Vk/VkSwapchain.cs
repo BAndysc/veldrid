@@ -110,12 +110,12 @@ namespace Veldrid.Vk
                 fence,
                 ref _currentImageIndex);
             _framebuffer.SetImageIndex(_currentImageIndex);
-            if (result == VkResult.ErrorOutOfDateKHR || result == VkResult.SuboptimalKHR)
+            if (result == VkResult.ErrorOutOfDateKHR) // || result == VkResult.SuboptimalKHR)
             {
                 CreateSwapchain(_framebuffer.Width, _framebuffer.Height);
                 return false;
             }
-            else if (result != VkResult.Success)
+            else if (result != VkResult.Success && result != VkResult.SuboptimalKHR)
             {
                 throw new VeldridException("Could not acquire next image from the Vulkan swapchain.");
             }
