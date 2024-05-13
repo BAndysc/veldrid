@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using Vulkan;
 using static Vulkan.VulkanNative;
 using static Veldrid.Vk.VulkanUtil;
@@ -103,6 +104,7 @@ namespace Veldrid.Vk
             {
                 rrc.Increment();
             }
+            // Console.WriteLine($"Submitted with {_currentStagingInfo.Resources.Count} refs.");
 
             _submittedStagingInfos.Add(cb, _currentStagingInfo);
             _currentStagingInfo = null;
@@ -257,7 +259,7 @@ namespace Veldrid.Vk
         {
             PreDrawCommand();
             VkBuffer vkBuffer = Util.AssertSubtype<DeviceBuffer, VkBuffer>(indirectBuffer);
-            _currentStagingInfo.Resources.Add(vkBuffer.RefCount);
+            _currentStagingInfo.AddResources(vkBuffer.RefCount);
             vkCmdDrawIndirect(_cb, vkBuffer.DeviceBuffer, offset, drawCount, stride);
         }
 
@@ -265,7 +267,7 @@ namespace Veldrid.Vk
         {
             PreDrawCommand();
             VkBuffer vkBuffer = Util.AssertSubtype<DeviceBuffer, VkBuffer>(indirectBuffer);
-            _currentStagingInfo.Resources.Add(vkBuffer.RefCount);
+            _currentStagingInfo.AddResources(vkBuffer.RefCount);
             vkCmdDrawIndexedIndirect(_cb, vkBuffer.DeviceBuffer, offset, drawCount, stride);
         }
 
@@ -349,10 +351,10 @@ namespace Veldrid.Vk
                     }
 
                     // Increment ref count on first use of a set.
-                    _currentStagingInfo.Resources.Add(vkSet.RefCount);
+                    _currentStagingInfo.AddResources(vkSet.RefCount);
                     for (int i = 0; i < vkSet.RefCounts.Count; i++)
                     {
-                        _currentStagingInfo.Resources.Add(vkSet.RefCounts[i]);
+                        _currentStagingInfo.AddResources(vkSet.RefCounts[i]);
                     }
                 }
 
@@ -428,7 +430,7 @@ namespace Veldrid.Vk
             PreDispatchCommand();
 
             VkBuffer vkBuffer = Util.AssertSubtype<DeviceBuffer, VkBuffer>(indirectBuffer);
-            _currentStagingInfo.Resources.Add(vkBuffer.RefCount);
+            _currentStagingInfo.AddResources(vkBuffer.RefCount);
             vkCmdDispatchIndirect(_cb, vkBuffer.DeviceBuffer, offset);
         }
 
@@ -440,9 +442,9 @@ namespace Veldrid.Vk
             }
 
             VkTexture vkSource = Util.AssertSubtype<Texture, VkTexture>(source);
-            _currentStagingInfo.Resources.Add(vkSource.RefCount);
+            _currentStagingInfo.AddResources(vkSource.RefCount);
             VkTexture vkDestination = Util.AssertSubtype<Texture, VkTexture>(destination);
-            _currentStagingInfo.Resources.Add(vkDestination.RefCount);
+            _currentStagingInfo.AddResources(vkDestination.RefCount);
             VkImageAspectFlags aspectFlags = ((source.Usage & TextureUsage.DepthStencil) == TextureUsage.DepthStencil)
                 ? VkImageAspectFlags.Depth | VkImageAspectFlags.Stencil
                 : VkImageAspectFlags.Color;
@@ -522,11 +524,11 @@ namespace Veldrid.Vk
             Util.EnsureArrayMinimumSize(ref _clearValues, clearValueCount + 1); // Leave an extra space for the depth value (tracked separately).
             Util.ClearArray(_validColorClearValues);
             Util.EnsureArrayMinimumSize(ref _validColorClearValues, clearValueCount);
-            _currentStagingInfo.Resources.Add(vkFB.RefCount);
+            _currentStagingInfo.AddResources(vkFB.RefCount);
 
             if (fb is VkSwapchainFramebuffer scFB)
             {
-                _currentStagingInfo.Resources.Add(scFB.Swapchain.RefCount);
+                _currentStagingInfo.AddResources(scFB.Swapchain.RefCount);
             }
         }
 
@@ -654,14 +656,14 @@ namespace Veldrid.Vk
             Vulkan.VkBuffer deviceBuffer = vkBuffer.DeviceBuffer;
             ulong offset64 = offset;
             vkCmdBindVertexBuffers(_cb, index, 1, ref deviceBuffer, ref offset64);
-            _currentStagingInfo.Resources.Add(vkBuffer.RefCount);
+            _currentStagingInfo.AddResources(vkBuffer.RefCount);
         }
 
         private protected override void SetIndexBufferCore(DeviceBuffer buffer, IndexFormat format, uint offset)
         {
             VkBuffer vkBuffer = Util.AssertSubtype<DeviceBuffer, VkBuffer>(buffer);
             vkCmdBindIndexBuffer(_cb, vkBuffer.DeviceBuffer, offset, VkFormats.VdToVkIndexFormat(format));
-            _currentStagingInfo.Resources.Add(vkBuffer.RefCount);
+            _currentStagingInfo.AddResources(vkBuffer.RefCount);
         }
 
         private protected override void SetPipelineCore(Pipeline pipeline)
@@ -684,7 +686,7 @@ namespace Veldrid.Vk
                 _currentComputePipeline = vkPipeline;
             }
 
-            _currentStagingInfo.Resources.Add(vkPipeline.RefCount);
+            _currentStagingInfo.AddResources(vkPipeline.RefCount);
         }
 
         private void ClearSets(BoundResourceSetInfo[] boundSets)
@@ -773,9 +775,9 @@ namespace Veldrid.Vk
             EnsureNoRenderPass();
 
             VkBuffer srcVkBuffer = Util.AssertSubtype<DeviceBuffer, VkBuffer>(source);
-            _currentStagingInfo.Resources.Add(srcVkBuffer.RefCount);
+            _currentStagingInfo.AddResources(srcVkBuffer.RefCount);
             VkBuffer dstVkBuffer = Util.AssertSubtype<DeviceBuffer, VkBuffer>(destination);
-            _currentStagingInfo.Resources.Add(dstVkBuffer.RefCount);
+            _currentStagingInfo.AddResources(dstVkBuffer.RefCount);
 
             VkBufferCopy region = new VkBufferCopy
             {
@@ -820,9 +822,9 @@ namespace Veldrid.Vk
                 width, height, depth, layerCount);
 
             VkTexture srcVkTexture = Util.AssertSubtype<Texture, VkTexture>(source);
-            _currentStagingInfo.Resources.Add(srcVkTexture.RefCount);
+            _currentStagingInfo.AddResources(srcVkTexture.RefCount);
             VkTexture dstVkTexture = Util.AssertSubtype<Texture, VkTexture>(destination);
-            _currentStagingInfo.Resources.Add(dstVkTexture.RefCount);
+            _currentStagingInfo.AddResources(dstVkTexture.RefCount);
         }
 
         internal static void CopyTextureCore_VkCommandBuffer(
@@ -1127,7 +1129,7 @@ namespace Veldrid.Vk
         {
             EnsureNoRenderPass();
             VkTexture vkTex = Util.AssertSubtype<Texture, VkTexture>(texture);
-            _currentStagingInfo.Resources.Add(vkTex.RefCount);
+            _currentStagingInfo.AddResources(vkTex.RefCount);
 
             uint layerCount = vkTex.ArrayLayers;
             if ((vkTex.Usage & TextureUsage.Cubemap) != 0)
@@ -1338,14 +1340,53 @@ namespace Veldrid.Vk
             }
         }
 
-        private class StagingResourceInfo
+        private sealed class StagingResourceInfo
         {
+            private class ResourceRefEqualityComparer : IEqualityComparer<ResourceRefCount>
+            {
+                public bool Equals(ResourceRefCount x, ResourceRefCount y)
+                {
+                    return x.ResourceId == y.ResourceId;
+                }
+
+                public int GetHashCode(ResourceRefCount obj)
+                {
+                    return obj.ResourceId;
+                }
+
+                public static ResourceRefEqualityComparer Instance { get; } = new ResourceRefEqualityComparer();
+            }
+
             public List<VkBuffer> BuffersUsed { get; } = new List<VkBuffer>();
-            public HashSet<ResourceRefCount> Resources { get; } = new HashSet<ResourceRefCount>();
+            public BitArray ReferencedResources { get; private set; } = new BitArray(ushort.MaxValue);
+            public List<ResourceRefCount> Resources { get; } = new List<ResourceRefCount>();
+            public HashSet<ResourceRefCount> ResourcesSet { get; } = new HashSet<ResourceRefCount>(ResourceRefEqualityComparer.Instance);
             public void Clear()
             {
                 BuffersUsed.Clear();
+                foreach (var res in Resources)
+                    ReferencedResources.Set(HashResourceId(res.ResourceId), false);
+                ResourcesSet.Clear();
                 Resources.Clear();
+            }
+
+            private int HashResourceId(int id)
+            {
+                return ((ushort)(id & 0xFFFF) ^ (ushort)((id >> 16) & 0xFFFF)) % 65535;
+            }
+
+            public void AddResources(ResourceRefCount resourceRefCount)
+            {
+                var hash = HashResourceId(resourceRefCount.ResourceId);
+                if (ReferencedResources[hash])
+                {
+                    if (!ResourcesSet.Add(resourceRefCount))
+                        return;
+                }
+
+                Resources.Add(resourceRefCount);
+                ResourcesSet.Add(resourceRefCount);
+                ReferencedResources[hash] = true;
             }
         }
 

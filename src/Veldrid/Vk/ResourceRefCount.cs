@@ -5,13 +5,23 @@ namespace Veldrid.Vk
 {
     internal class ResourceRefCount
     {
+        private static int nextResourceId = 1;
+
         private readonly Action _disposeAction;
         private int _refCount;
+        private int _resouceId;
+
+        public int ResourceId => _resouceId;
 
         public ResourceRefCount(Action disposeAction)
         {
             _disposeAction = disposeAction;
             _refCount = 1;
+            _resouceId = Interlocked.Increment(ref nextResourceId);
+            if ((_resouceId % 10000) == 0)
+            {
+                Console.WriteLine("ResourceRefCount: " + _resouceId);
+            }
         }
 
         public int Increment()
