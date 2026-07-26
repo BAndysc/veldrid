@@ -89,6 +89,25 @@ namespace Veldrid
         };
 
         /// <summary>
+        /// Describes the rasterizer state, with clockwise frontface culling, solid polygon filling, and both depth
+        /// clipping and scissor tests enabled.
+        /// Settings:
+        ///     CullMode = FaceCullMode.Back
+        ///     FillMode = PolygonFillMode.Solid
+        ///     FrontFace = FrontFace.Clockwise
+        ///     DepthClipEnabled = true
+        ///     ScissorTestEnabled = false
+        /// </summary>
+        public static readonly RasterizerStateDescription Front = new RasterizerStateDescription
+        {
+            CullMode = FaceCullMode.Front,
+            FillMode = PolygonFillMode.Solid,
+            FrontFace = FrontFace.Clockwise,
+            DepthClipEnabled = true,
+            ScissorTestEnabled = false,
+        };
+
+        /// <summary>
         /// Element-wise equality.
         /// </summary>
         /// <param name="other">The instance to compare to.</param>
